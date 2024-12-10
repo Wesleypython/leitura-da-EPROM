@@ -1,4 +1,5 @@
 // Definições de pinos
+// EPROM EPC1441LC20N
 #define DATA 2    // Saída de Dados Serial
 #define DCLK 4    // Clock Serial Bidirecional
 #define OE 8      // Enable de Saída
