@@ -1,0 +1,154 @@
+// leitura da EPROM (comunicacação serial)  e escrita no cartão SD
+
+
+#include <SPI.h>
+#include <SD.h>
+
+// Definições de pinos para leitura de EPROM
+#define DATA 2    // Saída de Dados Serial
+#define DCLK 4    // Clock Serial Bidirecional
+#define OE 8      // Enable de Saída
+#define nCS 9     // Chip Select (ativo baixo)
+
+// Definição de pino para cartão SD
+#define CS 6 // Chip Select para o SD
+
+// Constante de atraso
+const int T = 40; // Atraso em microssegundos
+
+// Objeto para o arquivo no cartão SD
+File arq;
+
+
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Iniciando o sistema...");
+
+  // Configuração de pinos para EEPROM
+  pinMode(DATA, INPUT);
+  pinMode(DCLK, OUTPUT);
+  pinMode(OE, OUTPUT);
+  pinMode(nCS, OUTPUT);
+
+  digitalWrite(DCLK, LOW); // Clock em estado baixo
+  digitalWrite(OE, HIGH);  // Habilitação ativa
+  digitalWrite(nCS, HIGH); // Chip desativado
+
+  // Inicialização do cartão SD
+  if (!SD.begin(CS)) {
+    Serial.println("Falha ao inicializar o cartão SD! \n Verifique as conexões no módulo e o Arduino.");
+    return;
+  }
+  else{
+    Serial.println("Cartão SD inicializado com sucesso! \n Digite 'r' para iniciar a leitura da EEPROM");
+  }
+
+  arq = SD.open("data2.txt", FILE_WRITE);
+  delay(4000);
+  if (!arq) {
+    Serial.println("Erro ao abrir o arquivo no cartão SD!");
+    // Tente realizar outras ações, como formatar o cartão ou reiniciar
+    return;  // Evite continuar o código se não for possível abrir o arquivo
+  }   
+  else{
+      Serial.println("Escrita iniciada no cartão SD.");
+     // Prototipação das funções
+    
+  }
+}
+void loop() {
+ 
+    if (Serial.available() > 0) {
+      char command = Serial.read();
+      if (command == 'r') {
+        Serial.println("Iniciando a leitura da EEPROM...");
+
+      
+        readAllEEPROM(0xFFFF); // Teste com intervalo pequeno
+
+        // Conclusão da leitura
+        Serial.println("Leitura concluída e dados gravados no cartão SD.");
+        arq.close();
+        Serial.println("Digite 'Ok' para reiniciar.");
+        String com = ""; // Inicializa a variável para capturar a entrada
+
+        while (true) {
+          if (Serial.available() > 0) {
+            com = Serial.readString(); // Lê a entrada do usuário
+            com.trim(); // Remove espaços em branco extras
+            if (com.equalsIgnoreCase("Ok")) { // Verifica se a entrada é "Ok"
+              break; // Sai do loop se o comando for correto
+            } else {
+              Serial.println("Comando inválido. Digite 'Ok' para continuar.");
+            }
+          }
+        }
+      
+      }
+    }
+}
+
+// Lê todos os bytes da EEPROM e grava no cartão SD
+void readAllEEPROM(unsigned int maxAddress) {
+
+  for (unsigned int address = 0; address <= maxAddress; address++) {
+    byte data = readData(address);
+
+    // Exibe os dados no monitor serial
+    Serial.print("Address 0x");
+    Serial.print(address, HEX);
+    Serial.print(": ");
+    Serial.println(data, BIN);
+
+    
+      // Aguarda 1 segundo após a inicialização do cartão SD
+
+
+    // Grava os dados no arquivo
+    arq.print("Address 0x");
+    arq.print(address, HEX);
+    arq.print(": ");
+    arq.println(data, BIN);
+
+    delay(10); // Pequeno atraso para evitar sobrecarga
+  }
+ 
+  Serial.println("Dados gravados no arquivo eprom_data.csv.");
+}
+
+// Define o endereço e lê um byte da EEPROM
+byte readData(unsigned int address) {
+  digitalWrite(nCS, LOW); // Habilita o chip
+  serWrite((0x03 << 16) | address, 24); // Envia comando de leitura
+  byte data = serRead(); // Lê o dado
+  digitalWrite(nCS, HIGH); // Desabilita o chip
+  return data;
+}
+
+// Envia dados serialmente para a EEPROM
+void serWrite(unsigned long data, byte bits) {
+  while (bits > 0) {
+    bits--;
+    digitalWrite(DATA, (data & 0x800000) ? HIGH : LOW); // Bit mais significativo
+    data <<= 1;
+    delayMicroseconds(T / 4);
+    digitalWrite(DCLK, HIGH);
+    delayMicroseconds(T / 2);
+    digitalWrite(DCLK, LOW);
+    delayMicroseconds(T / 4);
+  }
+}
+
+// Lê um byte serialmente da EEPROM
+byte serRead() {
+  byte data = 0;
+  for (byte i = 0; i < 8; i++) {
+    digitalWrite(DCLK, HIGH);
+    delayMicroseconds(T / 4);
+    data = (data << 1) | digitalRead(DATA);
+    digitalWrite(DCLK, LOW);
+    delayMicroseconds(T / 4);
+  }
+  return data;
+}
