@@ -1,10 +1,8 @@
-// leitura da EPROM (comunicacação serial)  e escrita no cartão SD
-
-
 #include <SPI.h>
 #include <SD.h>
 
-// Definições de pinos para leitura de EPROM
+// Definições de pinos para leitura de EPROM  
+// oBS O RESTANTE DOS PINOS TEM CONEXÃO COM O GND E VCC
 #define DATA 2    // Saída de Dados Serial
 #define DCLK 4    // Clock Serial Bidirecional
 #define OE 8      // Enable de Saída
@@ -19,7 +17,8 @@ const int T = 40; // Atraso em microssegundos
 // Objeto para o arquivo no cartão SD
 File arq;
 
-
+unsigned long maxAddress = 0xFFFF;
+unsigned long address = 0; 
 
 void setup() {
   Serial.begin(9600);
@@ -44,7 +43,7 @@ void setup() {
     Serial.println("Cartão SD inicializado com sucesso! \n Digite 'r' para iniciar a leitura da EEPROM");
   }
 
-  arq = SD.open("data2.txt", FILE_WRITE);
+  arq = SD.open("dado.txt", FILE_WRITE);
   delay(4000);
   if (!arq) {
     Serial.println("Erro ao abrir o arquivo no cartão SD!");
@@ -64,16 +63,35 @@ void loop() {
       if (command == 'r') {
         Serial.println("Iniciando a leitura da EEPROM...");
 
-      
-        readAllEEPROM(0xFFFF); // Teste com intervalo pequeno
-
+      if(address <= maxAddress){
+          readAllEEPROM(); // Teste com intervalo pequeno
+      }
         // Conclusão da leitura
-        Serial.println("Leitura concluída e dados gravados no cartão SD.");
-        arq.close();
-        Serial.println("Digite 'Ok' para reiniciar.");
-        String com = ""; // Inicializa a variável para capturar a entrada
+      
+      Serial.println("Digite 'Ok' para reiniciar.");
+      String com = ""; // Inicializa a variável para capturar a entrada
+      arq = SD.open("dado.txt");
+      if(arq)
+      {
+        Serial.print("Lendo o arquivo: ");
+        Serial.println(arq.name()); // Exibindo o nome do arquivo 
+        Serial.print("Tamanho do arquivo em bytes: "); // tamanho do arquivo 
+        Serial.println(arq.size());
+        Serial.println("Conteúdo do arquivo: ");
 
-        while (true) {
+        while(arq.available())
+        {
+          Serial.write(arq.read()); //Lê caractere por caractere e exibe na serial. Conteúdo do arquivo
+        }
+
+        arq.close();
+      }
+      else
+      {
+        Serial.println("Erro ao abrir o arquivo para ler");
+      }
+
+      while (true) {
           if (Serial.available() > 0) {
             com = Serial.readString(); // Lê a entrada do usuário
             com.trim(); // Remove espaços em branco extras
@@ -90,9 +108,9 @@ void loop() {
 }
 
 // Lê todos os bytes da EEPROM e grava no cartão SD
-void readAllEEPROM(unsigned int maxAddress) {
+void readAllEEPROM() {
 
-  for (unsigned int address = 0; address <= maxAddress; address++) {
+  for ( int X=0;address < maxAddress; address++) {
     byte data = readData(address);
 
     // Exibe os dados no monitor serial
@@ -103,8 +121,6 @@ void readAllEEPROM(unsigned int maxAddress) {
 
     
       // Aguarda 1 segundo após a inicialização do cartão SD
-
-
     // Grava os dados no arquivo
     arq.print("Address 0x");
     arq.print(address, HEX);
@@ -113,6 +129,10 @@ void readAllEEPROM(unsigned int maxAddress) {
 
     delay(10); // Pequeno atraso para evitar sobrecarga
   }
+  Serial.println("Leitura concluída e dados gravados no cartão SD.");
+  arq.close();
+  while(address=maxAddress);
+  return address;
  
   Serial.println("Dados gravados no arquivo eprom_data.csv.");
 }
