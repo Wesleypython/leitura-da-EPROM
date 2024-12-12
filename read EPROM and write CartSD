@@ -2,13 +2,14 @@
 #include <SD.h>
 
 // Definições de pinos para leitura de EPROM  
-// oBS O RESTANTE DOS PINOS TEM CONEXÃO COM O GND E VCC
 #define DATA 2    // Saída de Dados Serial
 #define DCLK 4    // Clock Serial Bidirecional
 #define OE 8      // Enable de Saída
 #define nCS 9     // Chip Select (ativo baixo)
+// OBSERVAÇÃO:  O RESTANTE DOS PINOS DA EPROM TEM CONEXÃO COM O GND E VCC
 
-// Definição de pino para cartão SD
+
+// Definição de pino para CARTÃOSD
 #define CS 6 // Chip Select para o SD
 
 // Constante de atraso
